@@ -1,0 +1,8 @@
+*.pth
+models*
+data/cache
+data/kitti/object
+*log.txt
+*.pyc
+*.so
+*.o

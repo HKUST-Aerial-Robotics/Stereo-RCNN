@@ -34,7 +34,7 @@ This implementation is tested under Pytorch 0.3.0. To avoid affecting your Pytor
 ```
 0.1. Other dependencies:
 ```
-    git clone git@github.com:PeiliangLi/Stereo-RCNN.git
+    git clone git@github.com:HKUST-Aerial-Robotics/Stereo-RCNN.git
     cd stereo_rcnn
     pip install -r requirements.txt
 ```

@@ -33,8 +33,9 @@ This implementation is tested under Pytorch 0.3.0. To avoid affecting your Pytor
 ```
 0.1. Other dependencies:
 ```
-    git clone git@github.com:PeiliangLi/Stereo-RCNN.git
+    git clone git@github.com:HKUST-Aerial-Robotics/Stereo-RCNN.git
     cd stereo_rcnn
+    git checkout mono
     pip install -r requirements.txt
 ```
 0.2. Build:
@@ -102,7 +103,7 @@ Some sample results:
 
 ## 5. Acknowledgments
 
-This repo is built based on the Faster RCNN implementation from [faster-rcnn.pytorch](https://github.com/jwyang/faster-rcnn.pytorch), and we also use the imagenet pretrained weight (originally provided from [here](https://filebox.ece.vt.edu/~jw2yang/faster-rcnn/pretrained-base-models/resnet101_caffe.pth)) for initialization.
+This repo is built based on the Faster RCNN implementation from [faster-rcnn.pytorch](https://github.com/jwyang/faster-rcnn.pytorch) and [fpn.pytorch](https://github.com/jwyang/fpn.pytorch), and we also use the imagenet pretrained weight (originally provided from [here](https://filebox.ece.vt.edu/~jw2yang/faster-rcnn/pretrained-base-models/resnet101_caffe.pth)) for initialization.
 
 ## 6. License
 The source code is released under [GPLv3](http://www.gnu.org/licenses/) license.

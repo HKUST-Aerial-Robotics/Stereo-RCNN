@@ -60,9 +60,6 @@ class _ProposalLayer(nn.Module):
         scores = input[0][:, :, 1]  # batch_size x num_rois x 1
         bbox_deltas_left_right = input[1]      # batch_size x num_rois x 4
         bbox_deltas_left = bbox_deltas_left_right[:,:,:4].clone()
-        bbox_deltas_right = bbox_deltas_left_right[:,:,:4].clone()
-        bbox_deltas_right[:,:,0] = bbox_deltas_left_right[:,:,4]
-        bbox_deltas_right[:,:,2] = bbox_deltas_left_right[:,:,5]
         im_info = input[2]
         cfg_key = input[3]
         feat_shapes = input[4]        
@@ -82,26 +79,21 @@ class _ProposalLayer(nn.Module):
 
         # Convert anchors into proposals via bbox transformations
         proposals_left = bbox_transform_inv(anchors, bbox_deltas_left, batch_size)
-        proposals_right = bbox_transform_inv(anchors, bbox_deltas_right, batch_size)
 
         # 2. clip predicted boxes to image
         proposals_left = clip_boxes(proposals_left, im_info, batch_size)
-        proposals_right = clip_boxes(proposals_right, im_info, batch_size)
         # keep_idx = self._filter_boxes(proposals, min_size).squeeze().long().nonzero().squeeze()
                 
         scores_keep = scores
         proposals_keep_left = proposals_left
-        proposals_keep_right = proposals_right
 
         _, order = torch.sort(scores_keep, 1, True)
 
         output_left = scores.new(batch_size, post_nms_topN, 5).zero_()
-        output_right = scores.new(batch_size, post_nms_topN, 5).zero_()
         for i in range(batch_size):
             # # 3. remove predicted boxes with either height or width < threshold
             # # (NOTE: convert min_size to input image scale stored in im_info[2])
             proposals_single_left = proposals_keep_left[i]
-            proposals_single_right = proposals_keep_right[i]
             scores_single = scores_keep[i]
 
             # # 4. sort all (proposal, score) pairs by score from highest to lowest
@@ -112,7 +104,6 @@ class _ProposalLayer(nn.Module):
                 order_single = order_single[:pre_nms_topN]
 
             proposals_single_left = proposals_single_left[order_single, :]
-            proposals_single_right = proposals_single_right[order_single, :]
             scores_single = scores_single[order_single].view(-1,1)
 
             # 6. apply nms (e.g. threshold = 0.7)
@@ -122,16 +113,12 @@ class _ProposalLayer(nn.Module):
             keep_idx_i_left = nms(torch.cat((proposals_single_left, scores_single), 1), nms_thresh, force_cpu=not cfg.USE_GPU_NMS)
             keep_idx_i_left = keep_idx_i_left.long().view(-1)
 
-            keep_idx_i_right = nms(torch.cat((proposals_single_right, scores_single), 1), nms_thresh, force_cpu=not cfg.USE_GPU_NMS)
-            keep_idx_i_right = keep_idx_i_right.long().view(-1)
+            keep_idx_i = keep_idx_i_left
 
-            keep_idx_i = torch.from_numpy(np.intersect1d(keep_idx_i_left.cpu().numpy(), \
-                                                         keep_idx_i_right.cpu().numpy())).cuda()
             if post_nms_topN > 0:
                 keep_idx_i = keep_idx_i[:post_nms_topN]
 
             proposals_single_left = proposals_single_left[keep_idx_i, :]
-            proposals_single_right = proposals_single_right[keep_idx_i, :]
             scores_single = scores_single[keep_idx_i, :]
 
             # padding 0 at the end.
@@ -139,10 +126,7 @@ class _ProposalLayer(nn.Module):
             output_left[i,:,0] = i
             output_left[i,:num_proposal,1:] = proposals_single_left
 
-            output_right[i,:,0] = i
-            output_right[i,:num_proposal,1:] = proposals_single_right
-
-        return output_left, output_right
+        return output_left
 
     def backward(self, top, propagate_down, bottom):
         """This layer does not propagate gradients."""

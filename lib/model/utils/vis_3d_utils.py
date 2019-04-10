@@ -71,6 +71,7 @@ def vis_lidar_in_bev(pointcloud, width=750, side_range=(-20, 20), fwd_range=(0,7
 def vis_box_in_bev(im_bev, pos, dim, orien, width=750, gt=False,
                    side_range=(-20, 20), fwd_range=(0,70),
                    min_height=-2.73, max_height=1.27):
+                   
     ''' Project 3D bounding box to bev image for simply visualization
         It should use consistent width and side/fwd range input with 
         the function: vis_lidar_in_bev

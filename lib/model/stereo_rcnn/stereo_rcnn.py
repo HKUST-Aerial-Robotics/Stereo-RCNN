@@ -138,14 +138,11 @@ class _StereoRCNN(nn.Module):
             
         return roi_pool_feat
 
-    def forward(self, im_left_data, im_right_data, im_info, gt_boxes_left, gt_boxes_right,\
-                gt_boxes_merge, gt_dim_orien, gt_kpts, num_boxes):
+    def forward(self, im_left_data, im_info, gt_boxes_left, gt_dim_orien, gt_kpts, num_boxes):
         batch_size = im_left_data.size(0)
 
         im_info = im_info.data
         gt_boxes_left = gt_boxes_left.data
-        gt_boxes_right = gt_boxes_right.data
-        gt_boxes_merge = gt_boxes_merge.data
         gt_dim_orien = gt_dim_orien.data
         gt_kpts = gt_kpts.data
         num_boxes = num_boxes.data
@@ -167,52 +164,27 @@ class _StereoRCNN(nn.Module):
         p2_left = self.RCNN_smooth3(p2_left)     # 256 x 1/4
         p6_left = self.maxpool2d(p5_left)        # 256 x 1/64
 
-        # feed right image data to base model to obtain base feature map
-        # Bottom-up
-        c1_right = self.RCNN_layer0(im_right_data)
-        c2_right = self.RCNN_layer1(c1_right)
-        c3_right = self.RCNN_layer2(c2_right)
-        c4_right = self.RCNN_layer3(c3_right)
-        c5_right = self.RCNN_layer4(c4_right)
-        # Top-down
-        p5_right = self.RCNN_toplayer(c5_right)
-        p4_right = self._upsample_add(p5_right, self.RCNN_latlayer1(c4_right))
-        p4_right = self.RCNN_smooth1(p4_right)
-        p3_right = self._upsample_add(p4_right, self.RCNN_latlayer2(c3_right))
-        p3_right = self.RCNN_smooth2(p3_right)
-        p2_right = self._upsample_add(p3_right, self.RCNN_latlayer3(c2_right))
-        p2_right = self.RCNN_smooth3(p2_right)
-        p6_right = self.maxpool2d(p5_right)
-
         rpn_feature_maps_left = [p2_left, p3_left, p4_left, p5_left, p6_left]
         mrcnn_feature_maps_left = [p2_left, p3_left, p4_left, p5_left]
 
-        rpn_feature_maps_right = [p2_right, p3_right, p4_right, p5_right, p6_right]
-        mrcnn_feature_maps_right = [p2_right, p3_right, p4_right, p5_right]
-
-        rois_left, rois_right, rpn_loss_cls, rpn_loss_bbox_left_right = \
-            self.RCNN_rpn(rpn_feature_maps_left, rpn_feature_maps_right, \
-            im_info, gt_boxes_left, gt_boxes_right, gt_boxes_merge, num_boxes)
+        rois_left, rpn_loss_cls, rpn_loss_bbox_left_right = \
+            self.RCNN_rpn(rpn_feature_maps_left, im_info, gt_boxes_left, num_boxes)
 
         # if it is training phrase, then use ground trubut bboxes for refining
         if self.training:
-            roi_data = self.RCNN_proposal_target(rois_left, rois_right, gt_boxes_left, gt_boxes_right, \
+            roi_data = self.RCNN_proposal_target(rois_left, gt_boxes_left, \
                                                 gt_dim_orien, gt_kpts, num_boxes)
-            rois_left, rois_right, rois_label, rois_target_left, rois_target_right,\
+            rois_left, rois_label, rois_target_left, \
             rois_target_dim_orien, kpts_label_all, kpts_weight_all, rois_inside_ws4, rois_outside_ws4 = roi_data
 
-            rois_target_left_right = rois_target_left.new(rois_target_left.size()[0],rois_target_left.size()[1],6)
+            rois_target_left_right = rois_target_left.new(rois_target_left.size()[0],rois_target_left.size()[1],4)
             rois_target_left_right[:,:,:4] = rois_target_left
-            rois_target_left_right[:,:,4] = rois_target_right[:,:,0]
-            rois_target_left_right[:,:,5] = rois_target_right[:,:,2]
 
-            rois_inside_ws = rois_inside_ws4.new(rois_inside_ws4.size()[0],rois_inside_ws4.size()[1],6)
+            rois_inside_ws = rois_inside_ws4.new(rois_inside_ws4.size()[0],rois_inside_ws4.size()[1],4)
             rois_inside_ws[:,:,:4] = rois_inside_ws4
-            rois_inside_ws[:,:,4:] = rois_inside_ws4[:,:,0:2]
 
-            rois_outside_ws = rois_outside_ws4.new(rois_outside_ws4.size()[0],rois_outside_ws4.size()[1],6)
+            rois_outside_ws = rois_outside_ws4.new(rois_outside_ws4.size()[0],rois_outside_ws4.size()[1],4)
             rois_outside_ws[:,:,:4] = rois_outside_ws4
-            rois_outside_ws[:,:,4:] = rois_outside_ws4[:,:,0:2]
 
             rois_label = rois_label.view(-1).long()
             rois_label = Variable(rois_label)
@@ -238,15 +210,12 @@ class _StereoRCNN(nn.Module):
             rpn_loss_bbox = 0
 
         rois_left = rois_left.view(-1,5)
-        rois_right = rois_right.view(-1,5)
         rois_left = Variable(rois_left)
-        rois_right = Variable(rois_right)
 
         # pooling features based on rois, output 14x14 map
         #roi_feat_left = self.PyramidRoI_Feat(mrcnn_feature_maps_left, rois_left, im_info)
         #roi_feat_right = self.PyramidRoI_Feat(mrcnn_feature_maps_right, rois_right, im_info)
-        roi_feat_semantic = torch.cat((self.PyramidRoI_Feat(mrcnn_feature_maps_left, rois_left, im_info),\
-                                       self.PyramidRoI_Feat(mrcnn_feature_maps_right, rois_right, im_info)),1)
+        roi_feat_semantic = self.PyramidRoI_Feat(mrcnn_feature_maps_left, rois_left, im_info)
 
         # feed pooled features to top model
         roi_feat_semantic = self._head_to_tail(roi_feat_semantic)
@@ -271,8 +240,8 @@ class _StereoRCNN(nn.Module):
         right_border_prob = F.softmax(right_border_pred,1) # num x cfg.KPTS_GRID
 
         if self.training:
-            bbox_pred_view = bbox_pred.view(bbox_pred.size(0), int(bbox_pred.size(1)/6), 6) # (128L, 2L, 6L)
-            bbox_pred_select = torch.gather(bbox_pred_view, 1, rois_label.long().view(rois_label.size(0), 1, 1).expand(rois_label.size(0), 1, 6))
+            bbox_pred_view = bbox_pred.view(bbox_pred.size(0), int(bbox_pred.size(1)/4), 4)
+            bbox_pred_select = torch.gather(bbox_pred_view, 1, rois_label.long().view(rois_label.size(0), 1, 1).expand(rois_label.size(0), 1, 4))
             bbox_pred = bbox_pred_select.squeeze(1)
 
             dim_orien_pred_view = dim_orien_pred.view(dim_orien_pred.size(0), int(dim_orien_pred.size(1)/5), 5) # (128L, 4L, 5L)
@@ -311,7 +280,6 @@ class _StereoRCNN(nn.Module):
             self.RCNN_loss_kpts = (self.RCNN_loss_kpts+self.RCNN_loss_left_border+self.RCNN_loss_right_border)/3.0
 
         rois_left = rois_left.view(batch_size,-1, rois_left.size(1))
-        rois_right = rois_right.view(batch_size, -1, rois_right.size(1))
         cls_prob = cls_prob.view(batch_size, -1, cls_prob.size(1))
         bbox_pred = bbox_pred.view(batch_size, -1, bbox_pred.size(1))
         dim_orien_pred = dim_orien_pred.view(batch_size, -1, dim_orien_pred.size(1)) 
@@ -319,7 +287,7 @@ class _StereoRCNN(nn.Module):
         if self.training:
             rois_label = rois_label.view(batch_size, -1)
 
-        return rois_left, rois_right, cls_prob, bbox_pred, dim_orien_pred, \
+        return rois_left, cls_prob, bbox_pred, dim_orien_pred, \
                kpts_prob, left_border_prob, right_border_prob, rpn_loss_cls, rpn_loss_bbox_left_right, \
                self.RCNN_loss_cls, self.RCNN_loss_bbox, self.RCNN_loss_dim_orien, self.RCNN_loss_kpts, rois_label  
 

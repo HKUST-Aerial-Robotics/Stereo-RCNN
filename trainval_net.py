@@ -46,7 +46,7 @@ def parse_args():
                       default=20, type=int)
 
   parser.add_argument('--save_dir', dest='save_dir',
-                      help='directory to save models', default="models_stereo",
+                      help='directory to save models', default="models_mono",
                       type=str)
   parser.add_argument('--nw', dest='num_workers',
                       help='number of worker to load data',
@@ -153,7 +153,7 @@ if __name__ == '__main__':
   lr = cfg.TRAIN.LEARNING_RATE
 
   uncert = Variable(torch.rand(6).cuda(), requires_grad=True)
-  torch.nn.init.constant(uncert, -1.0)
+  torch.nn.init.constant(uncert, 0.0)
 
   params = []
   for key, value in dict(stereoRCNN.named_parameters()).items():
@@ -205,11 +205,10 @@ if __name__ == '__main__':
 
       start = time.time() 
       stereoRCNN.zero_grad()
-      rois_left, rois_right, cls_prob, bbox_pred, dim_orien_pred, kpts_prob, \
+      rois_left, cls_prob, bbox_pred, dim_orien_pred, kpts_prob, \
       left_border_prob, right_border_prob, rpn_loss_cls, rpn_loss_box_left_right,\
       RCNN_loss_cls, RCNN_loss_bbox, RCNN_loss_dim_orien, RCNN_loss_kpts, rois_label =\
-      stereoRCNN(im_left_data, im_right_data, im_info, gt_boxes_left, gt_boxes_right, \
-                 gt_boxes_merge, gt_dim_orien, gt_kpts, num_boxes)
+      stereoRCNN(im_left_data, im_info, gt_boxes_left, gt_dim_orien, gt_kpts, num_boxes)
 
       loss = rpn_loss_cls.mean() * torch.exp(-uncert[0]) + uncert[0] +\
               rpn_loss_box_left_right.mean() * torch.exp(-uncert[1]) + uncert[1] +\

@@ -77,7 +77,6 @@ def align(calib, scale, im_left, im_right, \
 		im_left, im_right: 1 x 3 x H x W
 		box_left: rois x 4 in origin image
 		keypoints: rois x 5 (kpt, kpt_type, prob, left_border, right_border in origin image
-		status: rois x 1: truncation, w/o; 2: normal case
 		poses: rois x 7 (x, y, z, w, h, l, theta)
 	Return:
 		solve_status: 1 denotes success, 0 denotes faild due to no valid pixel (rois x 1)
@@ -295,6 +294,7 @@ def align_parallel(calib, scale, im_left, im_right, \
 		
 	best_depth = enumeration_depth(im_left, im_right, all_uvz, all_weight, tune_depth_enum, f*bl)
 	
+	best_dis = f*bl/best_depth
 	best_dis = f*bl/(best_depth*scale) + 0.5
 
 	return solve_status, best_dis

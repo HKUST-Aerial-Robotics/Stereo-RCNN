@@ -166,7 +166,7 @@ def kpt2alpha(kpt_pos, kpt_type, box):
     
     return alpha
 
-def solve_x_y_z_theta_from_kpt(im_shape, calib, alpha, dim, box_left, box_right, kpts):
+def solve_x_y_z_theta_from_kpt(im_shape, calib, alpha, dim, box_left, kpts):
     ''' Solve initial 3D bounding box use the 2D bounding boxes, keypoints/alpha angle
 
         Inputs:
@@ -180,7 +180,7 @@ def solve_x_y_z_theta_from_kpt(im_shape, calib, alpha, dim, box_left, box_right,
                           u coordinates of the left borderline,
                           u coordinates of the right borderline
         Return:
-            status: 0: faild, 1: normal
+            status: 0: faild, 1: truncate, 2: normal
             x: solved object pose (x, y, z, theta)
     '''
     if kpts[4] - kpts[3] < 3 or box_left[2]-box_left[0]< 10 or box_left[3]-box_left[1]< 10:
@@ -191,7 +191,6 @@ def solve_x_y_z_theta_from_kpt(im_shape, calib, alpha, dim, box_left, box_right,
     truncate_border = 10
     w, h, l = dim[0], dim[1], dim[2] 
     ul, ur, vt, vb = box_left[0], box_left[2], box_left[1], box_left[3]
-    ul_r, ur_r = box_right[0], box_right[2]
 
     f = calib.p2[0,0]
     cx, cy = calib.p2[0,2], calib.p2[1,2]
@@ -203,9 +202,6 @@ def solve_x_y_z_theta_from_kpt(im_shape, calib, alpha, dim, box_left, box_right,
     top_v = (vt - cy)/f
     bottom_v = (vb - cy)/f 
     kpt_u = (kpt_pos - cx)/f
-
-    left_u_right = (ul_r - cx)/f
-    right_u_right = (ur_r - cx)/f 
     
     if ul < 2.0*truncate_border or ur > w_max - 2.0*truncate_border:
         truncation = True
@@ -245,32 +241,27 @@ def solve_x_y_z_theta_from_kpt(im_shape, calib, alpha, dim, box_left, box_right,
         res_vb = y/(z -np.sin(theta)*bottom_w + np.cos(theta)*bottom_l) - bottom_v
         res_vt = (y - h)/(z +np.sin(theta)*bottom_w -np.cos(theta)*bottom_l) - top_v
         
-        res_ul_right = (x -bl + np.cos(theta)*left_w + np.sin(theta)*left_l)/(z-np.sin(theta)*left_w+np.cos(theta)*left_l) - left_u_right
-        res_ur_right = (x -bl + np.cos(theta)*right_w + np.sin(theta)*right_l)/(z-np.sin(theta)*right_w+np.cos(theta)*right_l) - right_u_right
-        
         res_alpha = theta - m.pi/2 + m.atan2(-x, z) - alpha
-        
+        res_z = z - 5.0
+
         if truncation:
             res_uk = 0
         else:
             res_alpha = 0
-            res_ul_right = 0
-            res_ur_right = 0
         
+        if not (truncation and vb > h_max - truncate_border):
+	        res_z = 0
+
         if ul < 2.0*truncate_border:
             res_ul = 0.0
-        if ul_r < 2.0*truncate_border:
-            res_ul_right = 0.0
         if ur > w_max - 2.0*truncate_border:
             res_ur = 0.0
-        if ur_r > w_max - 2.0*truncate_border:
-            res_ur_right = 0.0
         if vt < truncate_border:
             res_vt = 0.0
         if vb > h_max - truncate_border:
             res_vb = 0.0
 
-        return res_ul**2 + res_ur**2 + res_uk**2 + res_vb**2 + res_vt**2 + res_alpha**2 + res_ul_right**2 + res_ur_right**2
+        return res_ul**2 + res_ur**2 + res_uk**2 + res_vb**2 + res_vt**2 + res_alpha**2 + res_z**2
 
     def j_kpt(states):
         x = states[0]
@@ -286,26 +277,22 @@ def solve_x_y_z_theta_from_kpt(im_shape, calib, alpha, dim, box_left, box_right,
         res_vb = y/(z-np.sin(theta)*bottom_w + np.cos(theta)*bottom_l) - bottom_v
         res_vt = (y - h)/(z +np.sin(theta)*bottom_w -np.cos(theta)*bottom_l) - top_v
 
-        res_ul_right = (x -bl + np.cos(theta)*left_w + np.sin(theta)*left_l)/(z-np.sin(theta)*left_w+np.cos(theta)*left_l) - left_u_right
-        res_ur_right = (x -bl + np.cos(theta)*right_w + np.sin(theta)*right_l)/(z-np.sin(theta)*right_w+np.cos(theta)*right_l) - right_u_right
-        
         res_alpha = theta - m.pi/2 + m.atan2(-x, z) - alpha
         
+        res_z = z - 5.0
+
         if truncation:
             res_uk = 0
         else:
             res_alpha = 0
-            res_ul_right = 0
-            res_ur_right = 0
+
+        if not (truncation and vb > h_max - truncate_border):
+	        res_z = 0
 
         if ul < 2.0*truncate_border:
             res_ul = 0.0
-        if ul_r < 2.0*truncate_border:
-            res_ul_right = 0.0
         if ur > w_max - 2.0*truncate_border:
             res_ur = 0.0
-        if ur_r > w_max - 2.0*truncate_border:
-            res_ur_right = 0.0
         if vt < truncate_border:
             res_vt = 0.0
         if vb > h_max - truncate_border:
@@ -343,36 +330,21 @@ def solve_x_y_z_theta_from_kpt(im_shape, calib, alpha, dim, box_left, box_right,
         dvt_dz = 2.0*res_vt*(h - y)/((z - bottom_l*np.cos(theta) + bottom_w*np.sin(theta))**2)
         dvt_dth = 2.0*res_vt*((h - y)*(bottom_w*np.cos(theta) + bottom_l*np.sin(theta)))/((z - bottom_l*np.cos(theta) + bottom_w*np.sin(theta))**2)
 
-        # jacobian of left u of right
-        dul_r_dx = 2.0*res_ul_right/(z + left_l*np.cos(theta) - left_w*np.sin(theta))
-        dul_r_dy = 0.0
-        dul_r_dz = -2.0*res_ul_right*(x -bl + left_w*np.cos(theta) + left_l*np.sin(theta))/\
-                        ((z + left_l*np.cos(theta) - left_w*np.sin(theta))**2)
-        dul_r_dth = 2.0*res_ul_right*((left_l*np.cos(theta) - left_w*np.sin(theta))/(z + left_l*np.cos(theta) - left_w*np.sin(theta)) +\
-                  ((left_w*np.cos(theta) + left_l*np.sin(theta))*(x- bl + left_w*np.cos(theta) + left_l*np.sin(theta)))/((z + left_l*np.cos(theta) - left_w*np.sin(theta))**2))
-        # jacobian of right u of right
-        dur_r_dx = 2.0*res_ur_right/(z + right_l*np.cos(theta) - right_w*np.sin(theta))
-        dur_r_dy = 0.0
-        dur_r_dz = -2.0*res_ur_right*(x - bl + right_w*np.cos(theta) + right_l*np.sin(theta))/\
-                        ((z + right_l*np.cos(theta) - right_w*np.sin(theta))**2)
-        dur_r_dth = 2.0*res_ur_right*((right_l*np.cos(theta) - right_w*np.sin(theta))/(z + right_l*np.cos(theta) - right_w*np.sin(theta)) +\
-                  ((right_w*np.cos(theta) + right_l*np.sin(theta))*(x -bl + right_w*np.cos(theta) + right_l*np.sin(theta)))/((z + right_l*np.cos(theta) - right_w*np.sin(theta))**2))
-        
         # jacobian of alpha
         dalpha_dx = 2.0*res_alpha /(1.0+(-x/z)**2) * (-1.0/z)
         dalpha_dy = 0.0
         dalpha_dz = 2.0*res_alpha /(1.0+(-x/z)**2) * (x/(z*z))
         dalpha_dth = 2.0*res_alpha 
+        dz_dz = 2.0*res_z
 
-        J = scipy.array([dul_dx + dur_dx + duk_dx + dvb_dx + dvt_dx + dul_r_dx + dur_r_dx + dalpha_dx, \
-                         dul_dy + dur_dy + duk_dy + dvb_dy + dvt_dy + dul_r_dy + dur_r_dy + dalpha_dy, \
-                         dul_dz + dur_dz + duk_dz + dvb_dz + dvt_dz + dul_r_dz + dur_r_dz + dalpha_dz, \
-                         dul_dth + dur_dth + duk_dth + dvb_dth + dvt_dth + dul_r_dth + dur_r_dth + dalpha_dth])
+        J = scipy.array([dul_dx + dur_dx + duk_dx + dvb_dx + dvt_dx + dalpha_dx, \
+                         dul_dy + dur_dy + duk_dy + dvb_dy + dvt_dy + dalpha_dy, \
+                         dul_dz + dur_dz + duk_dz + dvb_dz + dvt_dz + dalpha_dz + dz_dz, \
+                         dul_dth + dur_dth + duk_dth + dvb_dth + dvt_dth + dalpha_dth])
 
         return J
 
-    disparity = (box_left[0]+box_left[2])/2 - (box_right[0]+box_right[2])/2
-    init_z = f*bl/disparity
+    init_z = f*h/(vb-vt)
     init_x = init_z*(left_u+right_u)/2.0
     init_y = init_z*(bottom_v+top_v)/2.0 + h/2.0
     

@@ -254,7 +254,7 @@ class resnet(_StereoRCNN):
 
 
     self.RCNN_top = nn.Sequential(
-      nn.Conv2d(512, 2048, kernel_size=cfg.POOLING_SIZE, stride=cfg.POOLING_SIZE, padding=0),
+      nn.Conv2d(256, 2048, kernel_size=cfg.POOLING_SIZE, stride=cfg.POOLING_SIZE, padding=0),
       nn.ReLU(True),
       nn.Dropout(p=0.2),
       nn.Conv2d(2048, 2048, kernel_size=1, stride=1, padding=0),
@@ -281,7 +281,7 @@ class resnet(_StereoRCNN):
 
     self.RCNN_cls_score = nn.Linear(2048, self.n_classes)
 
-    self.RCNN_bbox_pred = nn.Linear(2048, 6*self.n_classes)
+    self.RCNN_bbox_pred = nn.Linear(2048, 4*self.n_classes)
     self.RCNN_dim_orien_pred = nn.Linear(2048, 5*self.n_classes)
     self.kpts_class = nn.Conv2d(256, 6, kernel_size=1, stride=1, padding=0)
 

@@ -448,7 +448,7 @@ def write_detection_results(result_dir, file_number, calib, box_left, pos, dim, 
     output_str = 'Car -1 -1 '
     alpha = orien - m.pi/2 + m.atan2(-pos[0], pos[2])
     output_str += '%f %f %f %f %f ' % (alpha, box_left[0],box_left[1],box_left[2],box_left[3])
-    output_str += '%f %f %f %f %f %f %f %f \n' % (dim[1],dim[0],dim[2],pos[0]-dis_cam02,pos[1],\
+    output_str += '%f %f %f %f %f %f %f %f \n' %(dim[1],dim[0],dim[2],pos[0]-dis_cam02,pos[1],\
                                                   pos[2],orien-1.57,score) 
 
     # Write TXT files

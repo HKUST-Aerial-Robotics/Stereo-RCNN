@@ -47,7 +47,7 @@ def parse_args():
   parser = argparse.ArgumentParser(description='Test the Stereo R-CNN network')
 
   parser.add_argument('--load_dir', dest='load_dir',
-                      help='directory to load models', default="models_stereo",
+                      help='directory to load models', default="models_mono",
                       type=str)
   parser.add_argument('--checkepoch', dest='checkepoch',
                       help='checkepoch to load network',
@@ -129,33 +129,16 @@ if __name__ == '__main__':
     num_boxes.data.resize_(data[8].size()).copy_(data[8])
     
     det_tic = time.time()
-    rois_left, rois_right, cls_prob, bbox_pred, bbox_pred_dim, kpts_prob,\
+    rois_left, cls_prob, bbox_pred, bbox_pred_dim, kpts_prob,\
     left_prob, right_prob, rpn_loss_cls, rpn_loss_box_left_right,\
     RCNN_loss_cls, RCNN_loss_bbox, RCNN_loss_dim_orien, RCNN_loss_kpts, rois_label =\
-    stereoRCNN(im_left_data, im_right_data, im_info, gt_boxes_left, gt_boxes_right,\
-              gt_boxes_merge, gt_dim_orien, gt_kpts, num_boxes)
+    stereoRCNN(im_left_data, im_info, gt_boxes_left, gt_boxes_right, gt_kpts, num_boxes)
     
     scores = cls_prob.data
     boxes_left = rois_left.data[:, :, 1:5]
-    boxes_right = rois_right.data[:, :, 1:5]
 
     bbox_pred = bbox_pred.data
-    box_delta_left = bbox_pred.new(bbox_pred.size()[1], 4*len(imdb._classes)).zero_()
-    box_delta_right = bbox_pred.new(bbox_pred.size()[1], 4*len(imdb._classes)).zero_()
-
-    for keep_inx in range(box_delta_left.size()[0]):
-      box_delta_left[keep_inx, 0::4] = bbox_pred[0,keep_inx,0::6]
-      box_delta_left[keep_inx, 1::4] = bbox_pred[0,keep_inx,1::6]
-      box_delta_left[keep_inx, 2::4] = bbox_pred[0,keep_inx,2::6]
-      box_delta_left[keep_inx, 3::4] = bbox_pred[0,keep_inx,3::6]
-
-      box_delta_right[keep_inx, 0::4] = bbox_pred[0,keep_inx,4::6]
-      box_delta_right[keep_inx, 1::4] = bbox_pred[0,keep_inx,1::6]
-      box_delta_right[keep_inx, 2::4] = bbox_pred[0,keep_inx,5::6]
-      box_delta_right[keep_inx, 3::4] = bbox_pred[0,keep_inx,3::6]
-
-    box_delta_left = box_delta_left.view(-1,4)
-    box_delta_right = box_delta_right.view(-1,4)
+    box_delta_left = bbox_pred.view(-1,4)
 
     dim_orien = bbox_pred_dim.data
     dim_orien = dim_orien.view(-1,5)
@@ -174,14 +157,10 @@ if __name__ == '__main__':
 
     box_delta_left = box_delta_left * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
                + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
-    box_delta_right = box_delta_right * torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_STDS).cuda() \
-               + torch.FloatTensor(cfg.TRAIN.BBOX_NORMALIZE_MEANS).cuda()
     dim_orien = dim_orien * torch.FloatTensor(cfg.TRAIN.DIM_NORMALIZE_STDS).cuda() \
                + torch.FloatTensor(cfg.TRAIN.DIM_NORMALIZE_MEANS).cuda()
 
-
     box_delta_left = box_delta_left.view(1,-1,4*len(imdb._classes))
-    box_delta_right = box_delta_right.view(1, -1,4*len(imdb._classes))
     dim_orien = dim_orien.view(1, -1, 5*len(imdb._classes))
     kpts_delta = kpts_delta.view(1, -1, 1)
     left_delta = left_delta.view(1, -1, 1)
@@ -189,23 +168,19 @@ if __name__ == '__main__':
     max_prob = max_prob.view(1, -1, 1)
 
     pred_boxes_left = bbox_transform_inv(boxes_left, box_delta_left, 1)
-    pred_boxes_right = bbox_transform_inv(boxes_right, box_delta_right, 1)
     pred_kpts, kpts_type = kpts_transform_inv(boxes_left, kpts_delta,cfg.KPTS_GRID)
     pred_left = border_transform_inv(boxes_left, left_delta,cfg.KPTS_GRID)
     pred_right = border_transform_inv(boxes_left, right_delta,cfg.KPTS_GRID)
 
     pred_boxes_left = clip_boxes(pred_boxes_left, im_info.data, 1)
-    pred_boxes_right = clip_boxes(pred_boxes_right, im_info.data, 1)
 
     pred_boxes_left /= im_info[0,2].data
-    pred_boxes_right /= im_info[0,2].data
     pred_kpts /= im_info[0,2].data
     pred_left /= im_info[0,2].data
     pred_right /= im_info[0,2].data
 
     scores = scores.squeeze()
     pred_boxes_left = pred_boxes_left.squeeze()
-    pred_boxes_right = pred_boxes_right.squeeze()
 
     pred_kpts = torch.cat((pred_kpts, kpts_type, max_prob, pred_left, pred_right),2)
     pred_kpts = pred_kpts.squeeze()
@@ -238,23 +213,19 @@ if __name__ == '__main__':
         _, order = torch.sort(cls_scores, 0, True)
 
         cls_boxes_left = pred_boxes_left[inds][:, j * 4:(j + 1) * 4]
-        cls_boxes_right = pred_boxes_right[inds][:, j * 4:(j + 1) * 4]
         cls_dim_orien = dim_orien[inds][:, j * 5:(j + 1) * 5]
         
         cls_kpts = pred_kpts[inds]
 
         cls_dets_left = torch.cat((cls_boxes_left, cls_scores.unsqueeze(1)), 1)
-        cls_dets_right = torch.cat((cls_boxes_right, cls_scores.unsqueeze(1)), 1)
 
         cls_dets_left = cls_dets_left[order]
-        cls_dets_right = cls_dets_right[order]
         cls_dim_orien = cls_dim_orien[order]
         cls_kpts = cls_kpts[order] 
 
         keep = nms(cls_dets_left, cfg.TEST.NMS, force_cpu= not cfg.USE_GPU_NMS)
         keep = keep.view(-1).long()
         cls_dets_left = cls_dets_left[keep]
-        cls_dets_right = cls_dets_right[keep]
         cls_dim_orien = cls_dim_orien[keep]
         cls_kpts = cls_kpts[keep]
 
@@ -268,8 +239,6 @@ if __name__ == '__main__':
 
         im2show_left = vis_detections(im2show_left, imdb._classes[j], \
                         cls_dets_left.cpu().numpy(), vis_thresh, cls_kpts.cpu().numpy())
-        im2show_right = vis_detections(im2show_right, imdb._classes[j], \
-                        cls_dets_right.cpu().numpy(), vis_thresh) 
 
         # read intrinsic
         f = calib.p2[0,0]
@@ -284,14 +253,14 @@ if __name__ == '__main__':
         for detect_idx in range(cls_dets_left.size()[0]):
           if cls_dets_left[detect_idx, -1] > eval_thresh:
             box_left = cls_dets_left[detect_idx,0:4].cpu().numpy()  # based on origin image
-            box_right = cls_dets_right[detect_idx,0:4].cpu().numpy() 
             kpts_u = cls_kpts[detect_idx,0]
             dim = cls_dim_orien[detect_idx,0:3].cpu().numpy()
             sin_alpha = cls_dim_orien[detect_idx,3]
             cos_alpha = cls_dim_orien[detect_idx,4]
             alpha = m.atan2(sin_alpha, cos_alpha)
+            # solve initial 3D box using single 2D box
             status, state = box_estimator.solve_x_y_z_theta_from_kpt(im2show_left.shape,\
-                                        calib, alpha, dim, box_left, box_right, cls_kpts[detect_idx])
+                                        calib, alpha, dim, box_left, cls_kpts[detect_idx])
             if status > 0: # not faild
               poses = im_left_data.data.new(8).zero_()
               xyz = np.array([state[0], state[1], state[2]])

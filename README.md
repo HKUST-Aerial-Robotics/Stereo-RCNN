@@ -6,12 +6,11 @@
 
 This project contains the implementation of our CVPR 2019 paper [arxiv](https://arxiv.org/pdf/1902.09738.pdf).
 
-Stereo R-CNN focuses on accurate 3D object detection and estimation using image-only data in autonomous driving scenarios. It features simultaneous object detection and association for stereo images, 3D box estimation using 2D information, accurate dense alignment for 3D box refinement. We also provide a light-weight version based on the monocular 2D detection, which only uses stereo images in the dense alignment module. Please checkout to branch mono for details.
+Stereo R-CNN focuses on accurate 3D object detection and estimation using image-only data in autonomous driving scenarios. It features simultaneous object detection and association for stereo images, 3D box estimation using the 2D information, accurate dense alignment for 3D box refinement. This branch is a light-weight version based on the monocular 2D detection, which only uses stereo images in the dense alignment module while has almost comparable performance with the full version. For the full version Stereo R-CNN, please checkout to branch master.
 
 **Authors:** [Peiliang Li](https://peiliangli.github.io/), [Xiaozhi Chen](https://xiaozhichen.github.io/) and [Shaojie Shen](http://uav.ust.hk/group/) from the [HKUST Aerial Robotics Group](http://uav.ust.hk/), and [DJI](https://www.dji.com/).
 
 If you find the project useful for your research, please cite: 
-
 ```
 @inproceedings{licvpr2019, 
     title     = {Stereo R-CNN based 3D Object Detection for Autonomous Driving}, 
@@ -23,7 +22,7 @@ If you find the project useful for your research, please cite:
 
 ## 0. Install
 
-This implementation is tested under Pytorch 0.3.0. To avoid affecting your Pytorch version, we recommend using conda to enable multiple versions of Pytorch.
+This implementation is tested under Pytorch 0.3.0. To avoid affecting your Pytorch version, we recommend using conda to enable multiple versions of Pytorch. Please ignore below steps if you have already run them following the master branch.
 
 0.0. Install Pytorch:
 ```
@@ -34,7 +33,7 @@ This implementation is tested under Pytorch 0.3.0. To avoid affecting your Pytor
 ```
 0.1. Other dependencies:
 ```
-    git clone git@github.com:HKUST-Aerial-Robotics/Stereo-RCNN.git
+    git clone git@github.com:PeiliangLi/Stereo-RCNN.git
     cd stereo_rcnn
     pip install -r requirements.txt
 ```
@@ -45,14 +44,13 @@ This implementation is tested under Pytorch 0.3.0. To avoid affecting your Pytor
     cd ..
 ```
 
-
 ## 1. Quick Demo
 
 1.0. Set the folder for placing the model
 ```
-    mkdir models_stereo
+    mkdir models_mono
 ```
-1.1. Download our trained weight [One Drive](https://hkustconnect-my.sharepoint.com/:u:/g/personal/pliap_connect_ust_hk/ESF-5mWMAK5PquLJQFs8evUB2xCbSwGuxbsUEeH9fcet6w?e=Vu0AzW)/[Google Drive](https://drive.google.com/file/d/1rZ5AsMms7-oO-VfoNTAmBFOr8O2L0-xt/view?usp=sharing) and put it into models_stereo/, then just run
+1.1. Download our trained weight [One Drive](https://hkustconnect-my.sharepoint.com/:u:/g/personal/pliap_connect_ust_hk/EVdm8bpmXopPhdWfEckR-lYB47al9bEzMMzSHkwbc-KkBg?e=QdRUJH)/[Google Drive](https://drive.google.com/file/d/12A1qNa2XKYku2159_GsYM_zrnN_B1FtM/view?usp=sharing) and put it into models_mono/, then just run
 
 ```
     python demo.py
@@ -86,9 +84,7 @@ Set corresponding CUDA_VISIBLE_DEVICES in train.sh, and simply run
 ```
     ./train.sh
 ```
-It consumes ~11G GPU memery. If your GPU memery is not enough, please try our light-weight version in branch mono.
-
-The trained model and training log are saved in /models_stereo by default.
+The trained model and training log are saved in /models_mono by default.
 
 ## 4. Evaluation
 
@@ -98,7 +94,7 @@ Set corresponding CUDA_VISIBLE_DEVICES in test.sh, and run
     ./test.sh
 ```
 
-The results are saved in models_stereo/result by default. You can evaluate the results using the tool from [here](https://github.com/prclibo/kitti_eval).
+The results are saved in models_mono/result by default. You can evaluate the results using the tool from [here](https://github.com/prclibo/kitti_eval).
 
 Some sample results:
 
@@ -106,7 +102,7 @@ Some sample results:
 
 ## 5. Acknowledgments
 
-This repo is built based on the Faster RCNN implementation from [faster-rcnn.pytorch](https://github.com/jwyang/faster-rcnn.pytorch) and [fpn.pytorch](https://github.com/jwyang/fpn.pytorch), and we also use the imagenet pretrained weight (originally provided from [here](https://filebox.ece.vt.edu/~jw2yang/faster-rcnn/pretrained-base-models/resnet101_caffe.pth)) for initialization.
+This repo is built based on the Faster RCNN implementation from [faster-rcnn.pytorch](https://github.com/jwyang/faster-rcnn.pytorch), and we also use the imagenet pretrained weight (originally provided from [here](https://filebox.ece.vt.edu/~jw2yang/faster-rcnn/pretrained-base-models/resnet101_caffe.pth)) for initialization.
 
 ## 6. License
 The source code is released under [GPLv3](http://www.gnu.org/licenses/) license.

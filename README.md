@@ -86,7 +86,7 @@ Set corresponding CUDA_VISIBLE_DEVICES in train.sh, and simply run
 ```
     ./train.sh
 ```
-It consumes ~11G GPU memery. If your GPU memery is not enough, please try our light-weight version in branch mono.
+It consumes ~11G GPU memery for training. If your GPU memery is not enough, please try our light-weight version in branch mono.
 
 The trained model and training log are saved in /models_stereo by default.
 

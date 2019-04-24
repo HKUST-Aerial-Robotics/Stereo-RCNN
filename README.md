@@ -109,7 +109,7 @@ Some sample results:
 This repo is built based on the Faster RCNN implementation from [faster-rcnn.pytorch](https://github.com/jwyang/faster-rcnn.pytorch) and [fpn.pytorch](https://github.com/jwyang/fpn.pytorch), and we also use the imagenet pretrained weight (originally provided from [here](https://filebox.ece.vt.edu/~jw2yang/faster-rcnn/pretrained-base-models/resnet101_caffe.pth)) for initialization.
 
 ## 6. License
-The source code is released under [GPLv3](http://www.gnu.org/licenses/) license.
+The source code is released under [MIT](https://opensource.org/licenses/MIT) license.
 
 We are still working on improving the code reliability. For any technical issues, please contact Peiliang Li <pliapATconnect.ust.hk>.
 

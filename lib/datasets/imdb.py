@@ -12,7 +12,6 @@ import os
 import os.path as osp
 import math as m
 import PIL
-from model.utils.cython_bbox import bbox_overlaps
 import numpy as np
 import scipy.sparse
 from model.utils.config import cfg
@@ -175,129 +174,6 @@ class imdb(object):
                'flipped': True}
       self.roidb.append(entry)
     self._image_index = self._image_index * 2
-
-  def evaluate_recall(self, scale, candidate_boxes=None, thresholds=None, limit=None, target='left'):
-    """Evaluate detection proposal recall metrics.
-
-    Returns:
-        results: dictionary of results with keys
-            'ar': average recall
-            'recalls': vector recalls at each IoU overlap threshold
-            'thresholds': vector of IoU overlap thresholds
-            'gt_overlaps': vector of all ground-truth overlaps
-    """
-    # Record max overlap value for each gt box
-    # Return vector of overlap values
-    gt_overlaps_left = np.zeros(0)
-    max_overlaps_inx_left = np.zeros(0)
-    gt_overlaps_right = np.zeros(0)
-    max_overlaps_inx_right = np.zeros(0)
-    num_pos = 0
-    for i in range(len(candidate_boxes)):
-      # Checking for max_overlaps == 1 avoids including crowd annotations
-      # (...pretty hacking :/)
-      gt_inds = np.where((self.roidb[i]['boxes_left'][:,3] - self.roidb[i]['boxes_left'][:,1] >= 25) &
-                         (self.roidb[i]['occlusion'][:] <= 1) &
-                         (self.roidb[i]['truncation'][:] <= 0.3) &
-                         (self.roidb[i]['gt_classes'][:] == 1))[0]
-      gt_boxes_left = self.roidb[i]['boxes_left'][gt_inds, :]
-      gt_boxes_right = self.roidb[i]['boxes_right'][gt_inds, :]
-      
-      num_pos += len(gt_inds)
-
-      boxes_left = candidate_boxes[i][:,:4]/scale
-      boxes_right = candidate_boxes[i][:,4:]/scale
-
-      if boxes_left.shape[0] == 0:
-        continue
-      if limit is not None and boxes_left.shape[0] > limit:
-        boxes_left = boxes_left[:limit, :]
-        boxes_right = boxes_right[:limit, :]
-
-      overlaps_left = bbox_overlaps(boxes_left[:,:4].astype(np.float),
-                              gt_boxes_left.astype(np.float))
-      overlaps_right = bbox_overlaps(boxes_right[:,:4].astype(np.float),
-                               gt_boxes_right.astype(np.float))
-
-      # left
-      _gt_overlaps_left = np.zeros((gt_boxes_left.shape[0]))
-      _max_overlaps_inx_left = np.zeros((gt_boxes_left.shape[0]), dtype=int)
-      for j in range(gt_boxes_left.shape[0]):
-        # find which proposal box maximally covers each gt box
-        argmax_overlaps_left = overlaps_left.argmax(axis=0)
-        # and get the iou amount of coverage for each gt box
-        max_overlaps_left = overlaps_left.max(axis=0)
-        # find which gt box is 'best' covered (i.e. 'best' = most iou)
-        gt_ind = max_overlaps_left.argmax()
-        gt_ovr = max_overlaps_left.max()
-        assert (gt_ovr >= 0)
-        # find the proposal box that covers the best covered gt box
-        box_ind = argmax_overlaps_left[gt_ind]
-        # record the iou coverage of this gt box
-        _gt_overlaps_left[j] = overlaps_left[box_ind, gt_ind]
-        _max_overlaps_inx_left[j] = box_ind
-        assert (_gt_overlaps_left[j] == gt_ovr)
-        # mark the proposal box and the gt box as used
-        overlaps_left[box_ind, :] = -1
-        overlaps_left[:, gt_ind] = -1
-      # append recorded iou coverage level
-      gt_overlaps_left = np.hstack((gt_overlaps_left, _gt_overlaps_left))
-      max_overlaps_inx_left = np.hstack((max_overlaps_inx_left, _max_overlaps_inx_left))
-
-      # right
-      _gt_overlaps_right = np.zeros((gt_boxes_right.shape[0]))
-      _max_overlaps_inx_right = np.zeros((gt_boxes_right.shape[0]), dtype=int)
-      for j in range(gt_boxes_right.shape[0]):
-        # find which proposal box maximally covers each gt box
-        argmax_overlaps_right = overlaps_right.argmax(axis=0)
-        # and get the iou amount of coverage for each gt box
-        max_overlaps_right = overlaps_right.max(axis=0)
-        # find which gt box is 'best' covered (i.e. 'best' = most iou)
-        gt_ind = max_overlaps_right.argmax()
-        gt_ovr = max_overlaps_right.max()
-        assert (gt_ovr >= 0)
-        # find the proposal box that covers the best covered gt box
-        box_ind = argmax_overlaps_right[gt_ind]
-        # record the iou coverage of this gt box
-        _gt_overlaps_right[j] = overlaps_right[box_ind, gt_ind]
-        _max_overlaps_inx_right[j] = box_ind
-        assert (_gt_overlaps_right[j] == gt_ovr)
-        # mark the proposal box and the gt box as used
-        overlaps_right[box_ind, :] = -1
-        overlaps_right[:, gt_ind] = -1
-      # append recorded iou coverage level
-      gt_overlaps_right = np.hstack((gt_overlaps_right, _gt_overlaps_right))
-      max_overlaps_inx_right = np.hstack((max_overlaps_inx_right, _max_overlaps_inx_right))
-
-    #gt_overlaps_left = np.sort(gt_overlaps_left)
-    if thresholds is None:
-      step = 0.05
-      thresholds = np.arange(0.1, 0.95 + 1e-5, step)
-    
-    recalls_left = np.zeros_like(thresholds)
-    # compute recall for each iou threshold
-    for i, t in enumerate(thresholds):
-      recalls_left[i] = (gt_overlaps_left >= t).sum() / float(num_pos)
-    # ar = 2 * np.trapz(recalls, thresholds)
-    ar_left = recalls_left.mean()
-
-    recalls_right = np.zeros_like(thresholds)
-    # compute recall for each iou threshold
-    for i, t in enumerate(thresholds):
-      recalls_right[i] = (gt_overlaps_right >= t).sum() / float(num_pos)
-    # ar = 2 * np.trapz(recalls, thresholds)
-    ar_right = recalls_right.mean()
-
-    recalls_stereo = np.zeros_like(thresholds)
-    # compute recall for each iou threshold
-    for i, t in enumerate(thresholds):
-      recalls_stereo[i] = ((gt_overlaps_left >= t)&(gt_overlaps_right >= t)&(max_overlaps_inx_right >= max_overlaps_inx_left)).sum() / float(num_pos)
-    # ar = 2 * np.trapz(recalls, thresholds)
-    ar_stereo = recalls_stereo.mean()
-
-    return {'ar_left': ar_left, 'recalls_left': recalls_left,\
-            'ar_right': ar_right, 'recalls_right': recalls_right,\
-            'ar_stereo': ar_stereo, 'recalls_stereo': recalls_stereo, 'thresholds': thresholds}
 
   def create_roidb_from_box_list(self, box_list, gt_roidb):
     assert len(box_list) == self.num_images, \

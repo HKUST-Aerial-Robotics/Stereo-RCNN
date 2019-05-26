@@ -95,7 +95,7 @@ Set corresponding CUDA_VISIBLE_DEVICES in test.sh, and run
     ./test.sh
 ```
 
-The results are saved in models_mono/result by default. You can evaluate the results using the tool from [here](https://github.com/prclibo/kitti_eval).
+The results are saved in models_mono/result/data by default. You can evaluate the results using the tool from [here](https://github.com/prclibo/kitti_eval).
 
 Some sample results:
 

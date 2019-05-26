@@ -1,10 +1,9 @@
 # Stereo R-CNN
 ## Stereo R-CNN based 3D Object Detection for Autonomous Driving
 
-**26 May 2019**: Pytorch 1.0.0 and Python 3.6 are supported now. Please checkout to [branch 1.0](https://github.com/HKUST-Aerial-Robotics/Stereo-RCNN/tree/1.0)!
-
 <img src="doc/system.png" width = 90% div align=center />
 
+**26 May 2019**: Pytorch 1.0.0 and Python 3.6 are supported now. Please checkout to [branch 1.0](https://github.com/HKUST-Aerial-Robotics/Stereo-RCNN/tree/1.0)!
 
 This project contains the implementation of our CVPR 2019 paper [arxiv](https://arxiv.org/pdf/1902.09738.pdf).
 

@@ -16,8 +16,8 @@ import numpy as np
 import numpy.random as npr
 
 from model.utils.config import cfg
-from generate_anchors import generate_anchors, generate_anchors_all_pyramids
-from bbox_transform import clip_boxes, bbox_overlaps_batch, bbox_transform_batch
+from model.rpn.generate_anchors import generate_anchors, generate_anchors_all_pyramids
+from model.rpn.bbox_transform import clip_boxes, bbox_overlaps_batch, bbox_transform_batch
 
 import pdb
 
@@ -67,8 +67,8 @@ class _AnchorTargetLayer(nn.Module):
         
         keep = ((anchors[:, 0] >= -self._allowed_border) &
                 (anchors[:, 1] >= -self._allowed_border) &
-                (anchors[:, 2] < long(im_info[0][1]) + self._allowed_border) &
-                (anchors[:, 3] < long(im_info[0][0]) + self._allowed_border))
+                (anchors[:, 2] < int(im_info[0][1]) + self._allowed_border) &
+                (anchors[:, 3] < int(im_info[0][0]) + self._allowed_border))
 
         inds_inside = torch.nonzero(keep).view(-1)
 
@@ -138,8 +138,8 @@ class _AnchorTargetLayer(nn.Module):
 
         if cfg.TRAIN.RPN_POSITIVE_WEIGHT < 0:
             num_examples = torch.sum(merged_labels[i] >= 0)
-            positive_weights = 1.0 / num_examples
-            negative_weights = 1.0 / num_examples
+            positive_weights = 1.0 / num_examples.item()
+            negative_weights = 1.0 / num_examples.item()
         else:
             assert ((cfg.TRAIN.RPN_POSITIVE_WEIGHT > 0) &
                     (cfg.TRAIN.RPN_POSITIVE_WEIGHT < 1))

@@ -10,7 +10,7 @@ import cv2
 from copy import copy
 import scipy
 from scipy.optimize import minimize
-import kitti_utils as utils
+from model.utils import kitti_utils as utils
     
 def BB2Viewpoint(alpha):
     '''Convert the viewpoint angle to discrete viewpoint

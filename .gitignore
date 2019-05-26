@@ -1,3 +1,4 @@
+*.json
 *.pth
 models*
 data/cache

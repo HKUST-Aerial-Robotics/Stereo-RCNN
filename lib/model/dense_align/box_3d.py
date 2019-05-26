@@ -94,7 +94,7 @@ class Box3d(nn.Module):
                                 [2, 3, 5],
                                 [1, 2, 5],
                                 [0, 1, 5]])
-        homo_pt3 = torch.cat((pt2, torch.ones_like(pt2[:,:,0])),2)
+        homo_pt3 = torch.cat((pt2, torch.ones_like(pt2[:,:,0]).unsqueeze(2)),2)
         valid_insec = homo_pt3.new(homo_pt3.size()[0],homo_pt3.size()[1], 4).zero_() # x_o, y_o, z_o, mask
         for i in range(3):
             plane = self.planes_c[plane_group[self.nearest_vertex,i]]

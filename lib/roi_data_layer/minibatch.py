@@ -14,7 +14,7 @@ from __future__ import print_function
 
 import numpy as np
 import numpy.random as npr
-from scipy.misc import imread
+import cv2
 from model.utils.config import cfg
 from model.utils.blob import prep_im_for_blob, im_list_to_blob
 import pdb
@@ -96,22 +96,8 @@ def _get_image_blob(roidb, scale_inds):
   processed_ims_right = []
   im_scales = []
   for i in range(num_images):
-    #im = cv2.imread(roidb[i]['image'])
-    img_left = imread(roidb[i]['img_left'])
-    img_right = imread(roidb[i]['img_right'])
-
-    if len(img_left.shape) == 2:
-      img_left = img_left[:,:,np.newaxis]
-      img_left = np.concatenate((img_left,img_left,img_left), axis=2)
-    
-    if len(img_right.shape) == 2:
-      img_right = img_right[:,:,np.newaxis]
-      img_right = np.concatenate((img_right,img_right,img_right), axis=2)
-
-    # flip the channel, since the original one using cv2
-    # rgb -> bgr
-    img_left = img_left[:,:,::-1]
-    img_right = img_right[:,:,::-1]
+    img_left = cv2.imread(roidb[i]['img_left'])
+    img_right = cv2.imread(roidb[i]['img_right'])
 
     if roidb[i]['flipped']:
       img_left_flip = img_right[:, ::-1, :].copy()

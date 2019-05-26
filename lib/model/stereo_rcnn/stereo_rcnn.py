@@ -15,7 +15,7 @@ import numpy as np
 import torchvision.utils as vutils
 from model.utils.config import cfg
 from model.rpn.stereo_rpn import _Stereo_RPN
-from model.roi_align.modules.roi_align import RoIAlignAvg
+from model.roi_layers import ROIAlign
 from model.rpn.proposal_target_layer import _ProposalTargetLayer
 from model.utils.net_utils import _smooth_l1_loss
 import time
@@ -41,8 +41,8 @@ class _StereoRCNN(nn.Module):
         self.RCNN_rpn = _Stereo_RPN(self.dout_base_model)
         self.RCNN_proposal_target = _ProposalTargetLayer(self.n_classes)
 
-        self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
-        self.RCNN_roi_kpts_align = RoIAlignAvg(cfg.POOLING_SIZE*2, cfg.POOLING_SIZE*2, 1.0/16.0)
+        self.RCNN_roi_align = ROIAlign((cfg.POOLING_SIZE, cfg.POOLING_SIZE), 1.0/16.0, 0)
+        self.RCNN_roi_kpts_align = ROIAlign((cfg.POOLING_SIZE*2, cfg.POOLING_SIZE*2), 1.0/16.0, 0)
         
     def _init_weights(self):
         def normal_init(m, mean, stddev, truncated=False):
@@ -105,7 +105,7 @@ class _StereoRCNN(nn.Module):
         So we choose bilinear upsample which supports arbitrary output sizes.
         '''
         _,_,H,W = y.size()
-        return F.upsample(x, size=(H,W), mode='bilinear') + y
+        return F.interpolate(x, size=(H,W), mode='bilinear') + y
 
     def PyramidRoI_Feat(self, feat_maps, rois, im_info, kpts=False, single_level=None):
         ''' roi pool on pyramid feature maps'''
@@ -124,6 +124,8 @@ class _StereoRCNN(nn.Module):
             if (roi_level == l).sum() == 0:
                 continue
             idx_l = (roi_level == l).nonzero().squeeze()
+            if idx_l.dim() == 0:
+                idx_l = idx_l.unsqueeze(0)
             box_to_levels.append(idx_l)
             scale = feat_maps[i].size(2) / im_info[0][0]
             if kpts is True:
@@ -292,19 +294,19 @@ class _StereoRCNN(nn.Module):
             kpts_pred = kpts_pred.view(-1, 4*cfg.KPTS_GRID)
             kpts_label = kpts_label.view(-1)
             self.RCNN_loss_kpts = F.cross_entropy(kpts_pred, kpts_label, reduce=False)
-            if torch.sum(kpts_weight).data[0] < 1:
+            if torch.sum(kpts_weight).item() < 1:
                 self.RCNN_loss_kpts = torch.sum(self.RCNN_loss_kpts*kpts_weight)
             else:
                 self.RCNN_loss_kpts = torch.sum(self.RCNN_loss_kpts*kpts_weight)/torch.sum(kpts_weight)
 
             self.RCNN_loss_left_border = F.cross_entropy(left_border_pred, left_border_label, reduce=False)
-            if torch.sum(left_border_weight).data[0] < 1:
+            if torch.sum(left_border_weight).item() < 1:
                 self.RCNN_loss_left_border = torch.sum(self.RCNN_loss_left_border*left_border_weight)
             else:
                 self.RCNN_loss_left_border = torch.sum(self.RCNN_loss_left_border*left_border_weight)/torch.sum(left_border_weight)
 
             self.RCNN_loss_right_border = F.cross_entropy(right_border_pred, right_border_label, reduce=False)
-            if torch.sum(right_border_weight).data[0]<1:
+            if torch.sum(right_border_weight).item()<1:
                 self.RCNN_loss_right_border = torch.sum(self.RCNN_loss_right_border*right_border_weight)
             else:
                 self.RCNN_loss_right_border = torch.sum(self.RCNN_loss_right_border*right_border_weight)/torch.sum(right_border_weight)

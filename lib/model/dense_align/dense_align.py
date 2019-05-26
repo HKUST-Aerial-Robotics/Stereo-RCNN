@@ -85,8 +85,8 @@ def align(calib, scale, im_left, im_right, \
 
 	'''
 	scale = scale * 2
-	im_left = F.upsample(im_left, scale_factor=2, mode='bilinear')
-	im_right = F.upsample(im_right, scale_factor=2, mode='bilinear')
+	im_left = F.interpolate(im_left, scale_factor=2, mode='bilinear')
+	im_right = F.interpolate(im_right, scale_factor=2, mode='bilinear')
 
 	f = calib.p2[0,0]*scale
 	bl = (calib.p2[0,3] - calib.p3[0,3])*scale/f
@@ -253,8 +253,8 @@ def align_parallel(calib, scale, im_left, im_right, \
 
 	'''
 	scale = scale * 2
-	im_left = F.upsample(im_left, scale_factor=2, mode='bilinear')
-	im_right = F.upsample(im_right, scale_factor=2, mode='bilinear')
+	im_left = F.interpolate(im_left, scale_factor=2, mode='bilinear')
+	im_right = F.interpolate(im_right, scale_factor=2, mode='bilinear')
 
 	f = calib.p2[0,0]*scale
 	bl = (calib.p2[0,3] - calib.p3[0,3])*scale/f

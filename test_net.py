@@ -51,7 +51,7 @@ def parse_args():
                       type=str)
   parser.add_argument('--checkepoch', dest='checkepoch',
                       help='checkepoch to load network',
-                      default=20, type=int)
+                      default=12, type=int)
   parser.add_argument('--checkpoint', dest='checkpoint',
                       help='checkpoint to load network',
                       default=6477, type=int)
@@ -252,7 +252,7 @@ if __name__ == '__main__':
           cls_dim_orien = cls_dim_orien[order]
           cls_kpts = cls_kpts[order] 
 
-          keep = nms(cls_boxes_left, cls_scores, cfg.TEST.NMS)
+          keep = nms(cls_boxes_left[order, :], cls_scores[order], cfg.TEST.NMS)
           keep = keep.view(-1).long()
           cls_dets_left = cls_dets_left[keep]
           cls_dets_right = cls_dets_right[keep]
@@ -316,7 +316,6 @@ if __name__ == '__main__':
                 box_left = boxes_all[solved_idx,0:4].cpu().numpy()
                 score = boxes_all[solved_idx,4].cpu().numpy()
                 dim = poses_all[solved_idx,3:6].cpu().numpy()
-                print('oses_all[solved_idx,7]', poses_all[solved_idx,7])
                 state_rect, z = box_estimator.solve_x_y_theta_from_kpt(im2show_left.shape, calib, \
                                                   poses_all[solved_idx,7].cpu().numpy(), dim, box_left, \
                                                   dis_final[solved_idx].cpu().numpy(), kpts_all[solved_idx].cpu().numpy())
@@ -338,7 +337,7 @@ if __name__ == '__main__':
 
       im2show = np.concatenate((im2show_left, im2show_right), axis=0)
       im2show = np.concatenate((im2show, im_box), axis=1)
-      #cv2.imshow('result', im2show)
+      cv2.imshow('result', im2show)
 
       k = cv2.waitKey(1)
       if k == 27:    # Esc key to stop

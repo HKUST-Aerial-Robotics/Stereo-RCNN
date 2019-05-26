@@ -23,19 +23,20 @@ If you find the project useful for your research, please cite:
 
 ## 0. Install
 
-This implementation is tested under Pytorch 0.3.0. To avoid affecting your Pytorch version, we recommend using conda to enable multiple versions of Pytorch.
+This implementation is tested under Pytorch 1.0.0. To avoid affecting your Pytorch version, we recommend using conda to enable multiple versions of Pytorch.
 
 0.0. Install Pytorch:
 ```
-    conda create -n env_stereo python=3.7
+    conda create -n env_stereo python=3.6
     conda activate env_stereo
-    conda install pytorch=1.0 cuda90 -c pytorch
+    conda install pytorch=1.0.0 cuda90 -c pytorch
     conda install torchvision -c pytorch
 ```
 0.1. Other dependencies:
 ```
     git clone git@github.com:HKUST-Aerial-Robotics/Stereo-RCNN.git
     cd stereo_rcnn
+    git checkout 1.0
     pip install -r requirements.txt
 ```
 0.2. Build:
@@ -52,7 +53,7 @@ This implementation is tested under Pytorch 0.3.0. To avoid affecting your Pytor
 ```
     mkdir models_stereo
 ```
-1.1. Download our trained weight [One Drive](https://hkustconnect-my.sharepoint.com/:u:/g/personal/pliap_connect_ust_hk/ESF-5mWMAK5PquLJQFs8evUB2xCbSwGuxbsUEeH9fcet6w?e=Vu0AzW)/[Google Drive](https://drive.google.com/file/d/1rZ5AsMms7-oO-VfoNTAmBFOr8O2L0-xt/view?usp=sharing) and put it into models_stereo/, then just run
+1.1. Download our trained weight [One Drive](https://hkustconnect-my.sharepoint.com/:u:/g/personal/pliap_connect_ust_hk/ETowGlAcACJBman4TnBO5LMB2-9NQPf1h_8Cd9Xl0HUIkQ?e=QmXwJC)/[Google Drive](https://drive.google.com/file/d/1rIS43NzTvjRMX9m3UZIG5EvgFzXOVZWX/view?usp=sharing) and put it into models_stereo/, then just run
 
 ```
     python demo.py
@@ -98,7 +99,7 @@ Set corresponding CUDA_VISIBLE_DEVICES in test.sh, and run
     ./test.sh
 ```
 
-The results are saved in models_stereo/result by default. You can evaluate the results using the tool from [here](https://github.com/prclibo/kitti_eval).
+The results are saved in models_stereo/result/data by default. You can evaluate the results using the tool from [here](https://github.com/prclibo/kitti_eval).
 
 Some sample results:
 

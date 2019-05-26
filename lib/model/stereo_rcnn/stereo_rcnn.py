@@ -105,7 +105,7 @@ class _StereoRCNN(nn.Module):
         So we choose bilinear upsample which supports arbitrary output sizes.
         '''
         _,_,H,W = y.size()
-        return F.interpolate(x, size=(H,W), mode='bilinear') + y
+        return F.interpolate(x, size=(H,W), mode='bilinear', align_corners=False) + y
 
     def PyramidRoI_Feat(self, feat_maps, rois, im_info, kpts=False, single_level=None):
         ''' roi pool on pyramid feature maps'''

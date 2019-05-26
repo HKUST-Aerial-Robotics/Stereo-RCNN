@@ -1,3 +1,5 @@
+build
+*egg-info
 *.json
 *.pth
 models*
